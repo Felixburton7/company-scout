@@ -23,9 +23,24 @@ async function main() {
         status VARCHAR(50) DEFAULT 'researching',
         lead_score INT DEFAULT 0,
         summary TEXT,
+        contacts JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+        try {
+            console.log("Attempting to add 'contacts' column if missing...");
+            await connection.query(`ALTER TABLE companies ADD COLUMN contacts JSON;`);
+        } catch (e) {
+            console.log("Column 'contacts' likely already exists or error adding:", e.message);
+        }
+
+        try {
+            console.log("Attempting to add 'email_draft' column if missing...");
+            await connection.query(`ALTER TABLE companies ADD COLUMN email_draft TEXT;`);
+        } catch (e) {
+            console.log("Column 'email_draft' likely already exists or error adding:", e.message);
+        }
 
         console.log("Table 'companies' ensured.");
     } catch (err) {

@@ -1,6 +1,6 @@
 # System Architecture: Company Scout
 
-This project is a high-performance **AI Sales Agent** prototype, mirroring the tech stack used at **Throxy**.
+This project is a high-performance **AI Sales Agent** prototype, mirroring the tech stack used in modern **AI applications**.
 
 ## 1. The Components & How They Link
 
