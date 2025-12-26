@@ -6,10 +6,8 @@ import { eq } from "drizzle-orm";
 export const researchCompany = task({
     id: "research-company",
     run: async (payload: { domain: string; dbId: number }) => {
-        const { GoogleGenerativeAI } = await import("@google/generative-ai");
-
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const Groq = await import("groq-sdk");
+        const groq = new Groq.default({ apiKey: process.env.GROQ_API_KEY });
 
         const prompt = `
             Analyze the company with the domain: ${payload.domain}.
@@ -20,11 +18,15 @@ export const researchCompany = task({
             Return ONLY valid JSON.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama3-70b-8192",
+            response_format: { type: "json_object" },
+        });
 
-        // Default values in case parsing fails
+        const text = completion.choices[0]?.message?.content || "{}";
+
+        // Default values
         let score = 50;
         let summary = `Could not analyze ${payload.domain}`;
 
@@ -33,7 +35,7 @@ export const researchCompany = task({
             score = data.score || 50;
             summary = data.summary || summary;
         } catch (e) {
-            console.error("Failed to parse Gemini response:", e);
+            console.error("Failed to parse Groq response:", e);
         }
 
         // Write back to SingleStore
