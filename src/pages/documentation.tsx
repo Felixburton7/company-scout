@@ -99,8 +99,8 @@ export default function Documentation() {
                 <title>How it Works | Company Scout</title>
             </Head>
 
-            <nav className="flex items-center justify-between px-6 py-6 max-w-[1400px] mx-auto w-full border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-                <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+            <nav className="flex items-center justify-between px-6 py-6 max-w-[1400px] mx-auto w-full">
+                <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight">
                     <div className="w-8 h-8 bg-black text-white flex items-center justify-center rounded-sm">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -109,8 +109,8 @@ export default function Documentation() {
                     <span className="text-[#1A1A1A]">company<span className="text-gray-400 font-light">.scout</span></span>
                 </Link>
                 <div className="hidden md:flex gap-6 text-sm font-medium text-gray-500">
-                    <Link href="/documentation" className="text-black cursor-pointer bg-gray-100 px-3 py-1 rounded-full border border-gray-200">Documentation</Link>
-                    <span className="hover:text-black cursor-pointer transition-colors px-3 py-1">API Status</span>
+                    <Link href="/documentation" className="hover:text-black cursor-pointer transition-colors">Documentation</Link>
+                    <Link href="/contact" className="hover:text-black cursor-pointer transition-colors">Contact us</Link>
                 </div>
             </nav>
 
