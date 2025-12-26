@@ -63,7 +63,7 @@ export default function Home() {
     {
       enabled: !!trackingId,
     }
-  );
+  ) as { data: CompanyData | undefined; isLoading: boolean; refetch: any };
 
   const isResearching = analyzeMutation.isPending || (!!trackingId && (!companyData || companyData.status === 'researching'));
 
@@ -312,7 +312,7 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="text-sm">
-                          {companyData.contacts && companyData.contacts.length > 0 ? (companyData.contacts.map((contact, i) => (
+                          {companyData.contacts && companyData.contacts.length > 0 ? (companyData.contacts.map((contact: Contact, i: number) => (
                             <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors group">
                               <td className="py-4 pl-2 font-bold text-[#1A1A1A]">
                                 {contact.name}
