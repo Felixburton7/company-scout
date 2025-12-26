@@ -5,5 +5,5 @@ export default defineConfig({
     // Your Next.js project is configured with a 300s (5min) maxDuration by default.
     // You can mistakenly override this in your `vercel.json` or in the Vercel dashboard.
     maxDuration: 300,
-    triggerDirectories: ["src/trigger"],
+    dirs: ["src/trigger"],
 });
