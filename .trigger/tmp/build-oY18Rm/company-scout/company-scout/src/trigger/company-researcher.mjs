@@ -25990,14 +25990,29 @@ var db = drizzle(poolConnection, { schema: schema_exports, mode: "default" });
 var researchCompany = task({
   id: "research-company",
   run: /* @__PURE__ */ __name(async (payload) => {
-    await new Promise((resolve) => setTimeout(resolve, 2e3));
-    const fakeScores = {
-      "openai.com": 95,
-      "throxy.io": 100,
-      "random.com": 20
-    };
-    const score = fakeScores[payload.domain] ?? 50;
-    const summary = `Generated AI summary for ${payload.domain}. Identified high-growth signals.`;
+    const { GoogleGenerativeAI } = await import("../../../../dist-GNDIOTF3.mjs");
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `
+            Analyze the company with the domain: ${payload.domain}.
+            Provide a JSON response with the following fields:
+            - summary: A brief summary of what the company does (max 2 sentences).
+            - score: A lead score from 0-100 based on how likely they are to be a high-growth tech company.
+            
+            Return ONLY valid JSON.
+        `;
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text2 = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
+    let score = 50;
+    let summary = `Could not analyze ${payload.domain}`;
+    try {
+      const data = JSON.parse(text2);
+      score = data.score || 50;
+      summary = data.summary || summary;
+    } catch (e) {
+      console.error("Failed to parse Gemini response:", e);
+    }
     await db.update(companies).set({
       status: "qualified",
       leadScore: score,

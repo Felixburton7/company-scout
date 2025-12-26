@@ -6,21 +6,37 @@ import { eq } from "drizzle-orm";
 export const researchCompany = task({
     id: "research-company",
     run: async (payload: { domain: string; dbId: number }) => {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
 
-        // Step 1: Simulate "AI Research"
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // Fake the delay
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const fakeScores: Record<string, number> = {
-            "openai.com": 95,
-            "throxy.io": 100,
-            "random.com": 20
-        };
+        const prompt = `
+            Analyze the company with the domain: ${payload.domain}.
+            Provide a JSON response with the following fields:
+            - summary: A brief summary of what the company does (max 2 sentences).
+            - score: A lead score from 0-100 based on how likely they are to be a high-growth tech company.
+            
+            Return ONLY valid JSON.
+        `;
 
-        // Default to 50 if score is undefined
-        const score = fakeScores[payload.domain] ?? 50;
-        const summary = `Generated AI summary for ${payload.domain}. Identified high-growth signals.`;
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
 
-        // Step 2: Write back to SingleStore (The "Closed Loop")
+        // Default values in case parsing fails
+        let score = 50;
+        let summary = `Could not analyze ${payload.domain}`;
+
+        try {
+            const data = JSON.parse(text);
+            score = data.score || 50;
+            summary = data.summary || summary;
+        } catch (e) {
+            console.error("Failed to parse Gemini response:", e);
+        }
+
+        // Write back to SingleStore
         await db.update(companies)
             .set({
                 status: 'qualified',
