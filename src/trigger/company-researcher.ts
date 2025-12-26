@@ -6,6 +6,14 @@ import { eq } from "drizzle-orm";
 export const researchCompany = task({
     id: "research-company",
     run: async (payload: { domain: string; dbId: number }) => {
+        // Validate required environment variables
+        if (!process.env.GROQ_API_KEY) {
+            throw new Error(
+                '❌ GROQ_API_KEY environment variable is not set!\n' +
+                'Please add it to your environment variables.'
+            );
+        }
+
         const Groq = await import("groq-sdk");
         const groq = new Groq.default({ apiKey: process.env.GROQ_API_KEY });
 

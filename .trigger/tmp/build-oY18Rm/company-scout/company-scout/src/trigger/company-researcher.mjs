@@ -25983,6 +25983,11 @@ var companies = mysqlTable("companies", {
 });
 
 // src/db/index.ts
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "❌ DATABASE_URL environment variable is not set!\nPlease add it to your Vercel environment variables:\nhttps://vercel.com/dashboard → Your Project → Settings → Environment Variables"
+  );
+}
 var poolConnection = import_promise.default.createPool({
   uri: process.env.DATABASE_URL
 });
@@ -25992,6 +25997,11 @@ var db = drizzle(poolConnection, { schema: schema_exports, mode: "default" });
 var researchCompany = task({
   id: "research-company",
   run: /* @__PURE__ */ __name(async (payload) => {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error(
+        "❌ GROQ_API_KEY environment variable is not set!\nPlease add it to your environment variables."
+      );
+    }
     const Groq = await import("../../../../groq-sdk-WMYVSKBH.mjs");
     const groq = new Groq.default({ apiKey: process.env.GROQ_API_KEY });
     async function fetchSiteText(url) {
