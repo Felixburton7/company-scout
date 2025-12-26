@@ -35,7 +35,7 @@ const LOADING_STEPS = [
 
 const REASSURANCE_MESSAGES = [
   "Just taking a second in the stream...",
-  "Optimizing neural pathways...",
+  "Nearly complete...",
   "Cross-referencing signals...",
   "Polishing the output..."
 ];
@@ -346,8 +346,7 @@ export default function Home() {
                   </div>
 
                   {/* Result Card 4: Active Campaign Sequence */}
-                  {/* @ts-ignore */}
-                  {companyData.contacts && (companyData.contacts as any[]).length > 0 && (
+                  {companyData.contacts && companyData.contacts.length > 0 && (
                     <div className="md:col-span-2 bg-[#F9FAFB] rounded-2xl p-8 border border-gray-200 border-dashed relative group">
                       <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase mb-6 block">Active Campaign Preview</span>
 
@@ -355,25 +354,19 @@ export default function Home() {
                         {/* Left: Targeting & Permutations */}
                         <div className="col-span-1 border-r border-gray-200 pr-0 md:pr-8">
                           <h4 className="font-bold text-sm mb-2">Targeting</h4>
-                          {/* @ts-ignore */}
                           <div className="flex items-center gap-2 mb-6">
                             <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs">
-                              {/* @ts-ignore */}
-                              {(companyData.contacts as any)[0].name.charAt(0)}
+                              {companyData.contacts[0].name.charAt(0)}
                             </div>
                             <div>
-                              {/* @ts-ignore */}
-                              <div className="font-bold text-sm">{(companyData.contacts as any)[0].name}</div>
-                              {/* @ts-ignore */}
-                              <div className="text-xs text-gray-500">{(companyData.contacts as any)[0].role}</div>
+                              <div className="font-bold text-sm">{companyData.contacts[0].name}</div>
+                              <div className="text-xs text-gray-500">{companyData.contacts[0].role}</div>
                             </div>
                           </div>
 
                           <h4 className="font-bold text-sm mb-2">Email Permutations</h4>
                           <div className="space-y-2 font-mono text-xs text-gray-500">
-                            {/* @ts-ignore */}
                             {(() => {
-                              /* @ts-ignore */
                               const c = companyData.contacts[0];
                               const names = c.name.toLowerCase().split(' ');
                               const f = names[0];
@@ -404,10 +397,9 @@ export default function Home() {
                               <span className="px-2 py-1 bg-gray-100 text-gray-500 text-[10px] font-bold rounded">DRAFT_V1</span>
                             </div>
                             <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">
-                              Hi {/* @ts-ignore */}{(companyData.contacts as any)[0].name.split(' ')[0]},
+                              Hi {companyData.contacts[0].name.split(' ')[0]},
                               <br /><br />
-                              {/* @ts-ignore */}
-                              {companyData.emailDraft as string}
+                              {companyData.emailDraft}
                               <br /><br />
                               Best,<br />
                               Felix
