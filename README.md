@@ -1,5 +1,7 @@
 # 🔍 Company Scout
 
+[**Live Website**](https://company-scout.vercel.app/) | [**Documentation**](https://company-scout.vercel.app/documentation)
+
 > **AI-Powered Sales Intelligence Platform** — Automated company research, lead discovery, and personalized outreach campaigns powered by cutting-edge AI agents.
 
 ![Company Scout](https://img.shields.io/badge/Status-Production-success)
@@ -31,42 +33,40 @@ This project mirrors the tech stack used in modern **AI-powered sales automation
 ┌─────────────────────────────────────────────────────────────┐
 │                     User Interface                          │
 │                  Next.js 14 + tRPC                          │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
+│           (Real-time Updates via Polling)                   │
+└──────────▲─────────┬────────────────────────────────────────┘
+           │         │
+      6. Results     │ 1. Request
+           │         ▼
+┌──────────┴─────────┴────────────────────────────────────────┐
 │                  Type-Safe API Layer                        │
 │              tRPC Endpoints (company.analyze)               │
 └────────────────────┬────────────────────────────────────────┘
                      │
-        ┌────────────┴────────────┐
-        ▼                         ▼
-┌──────────────────┐    ┌──────────────────────┐
-│   SingleStore    │    │    Trigger.dev       │
-│  (Distributed    │◄───┤   (AI Orchestration) │
-│   SQL Database)  │    │                      │
-└──────────────────┘    └──────────┬───────────┘
-                                   │
-                        ┌──────────┴──────────┐
-                        ▼                     ▼
-                 ┌─────────────┐      ┌─────────────┐
-                 │  Gemini AI  │      │  OpenAI     │
-                 │   (Google)  │      │   (GPT-4)   │
-                 └─────────────┘      └─────────────┘
+                     │ 2. Trigger
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Trigger.dev v4                             │
+│                  (AI Agent Orchestration)                   │
+└──────────┬───────────────────────┬──────────────────────────┘
+           │                       │
+           │ 3. Scrape             │ 4. Process
+           ▼                       ▼
+    ┌─────────────┐         ┌─────────────┐
+    │ DOM Scraper │         │    Groq     │
+    │ (Filtering) │         │  (Llama 3)  │
+    └─────────────┘         └─────────────┘
+           │                       │
+           └───────────┬───────────┘
+                       │ 5. Save
+                       ▼
+            ┌─────────────────────┐
+            │    SingleStore      │
+            │   (DB Persistence)  │
+            └─────────────────────┘
 ```
 
-### Data Flow
 
-```
-User Input (domain) 
-  → Next.js UI 
-  → tRPC API 
-  → SingleStore (Create "researching" record) 
-  → Trigger.dev (AI Agent Task) 
-  → AI Models (Company research & lead discovery)
-  → SingleStore (Update with results)
-  → User Dashboard (Real-time updates)
-```
 
 ---
 
@@ -118,8 +118,7 @@ User Input (domain)
 - **Automatic checkpointing**: Resume failed tasks from the last successful step
 
 ### AI Models
-- **Google Gemini**: Primary research and analysis model
-- **OpenAI GPT-4**: Fallback model for specialized tasks
+- **Groq + Llama 3**: Primary cognitive processing unit for research and analysis
 - **Structured outputs**: JSON schema validation for reliable data extraction
 
 ---
@@ -145,68 +144,46 @@ company-scout/
 │       └── company-scout.ts       # AI agent tasks
 ├── trigger.config.ts              # Trigger.dev configuration
 ├── drizzle.config.ts              # Database configuration
-└── ARCHITECTURE.md                # System architecture docs
+└── documentation/                 # Project documentation
+    ├── ARCHITECTURE.md            # System architecture docs
+    └── AGENTS.md                  # Agent patterns
 ```
 
 ---
 
-## 🎯 How It Works
+## ⚙️ Inside the Engine
 
-### Step 1: User Input
-User enters a company domain (e.g., `stripe.com`) and clicks "Analyze Company"
+From raw domain to actionable intelligence. A breakdown of our autonomous agentic workflow.
 
-### Step 2: API Request
-```typescript
-// tRPC endpoint creates initial record
-const analysis = await ctx.db.insert(companyAnalyses).values({
-  domain: input.domain,
-  status: 'researching',
-  createdAt: new Date(),
-});
-```
+### Step 01: Request Initialization
+You enter a company domain (e.g., `stripe.com`). The Next.js frontend sends a signed request via tRPC to our backend.
 
-### Step 3: Background Task Trigger
-```typescript
-// Offload heavy AI work to Trigger.dev
-await tasks.trigger("company-scout", {
-  analysisId: analysis.id,
-  domain: input.domain,
-});
-```
+**Technology**: Next.js + tRPC
 
-### Step 4: AI Agent Execution
-The Trigger.dev task orchestrates multiple AI operations:
+### Step 02: Agent Orchestration
+Trigger.dev receives the event and spins up a resilient background worker. This ensures the long-running research task never times out.
 
-1. **Company Research** (Gemini AI)
-   - Analyze website content
-   - Extract company information
-   - Categorize industry and size
+**Technology**: Trigger.dev v4
 
-2. **Lead Discovery** (Pattern matching + AI)
-   - Identify key decision-makers
-   - Generate email permutations
-   - Score lead quality
+### Step 03: Deep Reconnaissance
+The agent actively crawls the homepage, 'About', and 'Team' sub-pages. It applies a strict anti-hallucination filter to ignore testimonials and investors, focusing only on operational staff.
 
-3. **Email Generation** (GPT-4)
-   - Create personalized outreach
-   - Incorporate company context
-   - Generate subject lines
+**Technology**: DOM Scraping & Filtering
 
-### Step 5: Database Update
-```typescript
-// Save results back to SingleStore
-await db.update(companyAnalyses)
-  .set({
-    status: 'completed',
-    companyInfo: aiResults.company,
-    leads: aiResults.contacts,
-    emailDraft: aiResults.campaign,
-  })
-  .where(eq(companyAnalyses.id, analysisId));
-```
+### Step 04: Cognitive Processing
+We feed the scraped context into Groq's LSH (Language Processing Unit) running Llama 3 70B. It extracts contacts and generates a sales summary.
 
-### Step 6: Real-Time UI Update
-The frontend polls for updates and displays results instantly
+**Technology**: Groq + Llama 3
+
+### Step 05: Data Persistence
+Structured insights (contacts, emails, summaries) are stored in SingleStore for caching and historical analysis.
+
+**Technology**: SingleStore DB
+
+### Step 06: Strategic Output
+The frontend polls the database state and renders the final 'AI Scouting Report' when the agent completes its mission.
+
+**Technology**: React Query
 
 ---
 
@@ -379,8 +356,8 @@ This project demonstrates several advanced patterns:
 
 ## 📝 Documentation
 
-- [**ARCHITECTURE.md**](./ARCHITECTURE.md) - System architecture and data flow
-- [**AGENTS.md**](./AGENTS.md) - Trigger.dev agent patterns and best practices
+- [**ARCHITECTURE.md**](./documentation/ARCHITECTURE.md) - System architecture and data flow
+- [**AGENTS.md**](./documentation/AGENTS.md) - Trigger.dev agent patterns and best practices
 - [**Documentation Page**](http://localhost:3000/documentation) - Interactive system documentation
 
 ---
@@ -418,8 +395,8 @@ Built with:
 - [SingleStore](https://www.singlestore.com/) - Distributed SQL database
 - [tRPC](https://trpc.io/) - Type-safe APIs
 - [Drizzle ORM](https://orm.drizzle.team/) - TypeScript ORM
-- [Google Gemini](https://ai.google.dev/) - AI model
-- [OpenAI](https://openai.com/) - GPT-4 model
+- [Groq](https://groq.com/) - Llama 3 Inference
+- [Llama 3](https://llama.meta.com/) - Open Source AI Model
 
 ---
 
