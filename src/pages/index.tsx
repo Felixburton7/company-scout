@@ -40,18 +40,33 @@ const REASSURANCE_MESSAGES = [
   "Polishing the output..."
 ];
 
+const FUNNY_MESSAGES = [
+  "Man, this is taking a while...",
+  "This is taking longer than usual...",
+  "Still working on it, I promise...",
+  "Definitely not stuck... probably...",
+  "The AI is thinking really hard...",
+  "Maybe grab a coffee? ☕",
+  "Rome wasn't built in a day...",
+  "Good things take time, right?",
+  "Still here, still processing...",
+  "Any minute now... any minute..."
+];
+
 export default function Home() {
   const [domain, setDomain] = useState('');
   const [trackingId, setTrackingId] = useState<number | null>(null);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [reassuranceIndex, setReassuranceIndex] = useState(0);
   const [showRawData, setShowRawData] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const analyzeMutation = trpc.company.analyze.useMutation({
     onSuccess: (data) => {
       setTrackingId(data.id);
       setLoadingStepIndex(0);
       setReassuranceIndex(0);
+      setElapsedSeconds(0);
     },
     onError: (err) => {
       alert("Error starting analysis: " + err.message);
@@ -90,6 +105,17 @@ export default function Home() {
     }, 1500);
 
     return () => clearInterval(interval);
+  }, [isResearching]);
+
+  // Track elapsed time
+  useEffect(() => {
+    if (!isResearching) return;
+
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [isResearching]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -218,11 +244,16 @@ export default function Home() {
                 <div className="space-y-2 relative h-16">
                   {/* Normal Status */}
                   <h3 className="text-xl font-bold text-gray-900 animate-pulse transition-all duration-300">
-                    {reassuranceIndex > 0 ? REASSURANCE_MESSAGES[(reassuranceIndex - 1) % REASSURANCE_MESSAGES.length] : LOADING_STEPS[loadingStepIndex]}
+                    {elapsedSeconds > 20
+                      ? FUNNY_MESSAGES[Math.floor((elapsedSeconds - 20) / 3) % FUNNY_MESSAGES.length]
+                      : (reassuranceIndex > 0
+                        ? REASSURANCE_MESSAGES[(reassuranceIndex - 1) % REASSURANCE_MESSAGES.length]
+                        : LOADING_STEPS[loadingStepIndex])
+                    }
                   </h3>
 
                   <p className="text-sm text-gray-400 font-mono mt-1">
-                    Thread ID: {trackingId ? `THX-${trackingId}` : 'INIT...'}
+                    Thread ID: {trackingId ? `THX-${trackingId}` : 'INIT...'} {elapsedSeconds > 20 && `• ${elapsedSeconds}s`}
                   </p>
                 </div>
 

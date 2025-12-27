@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../../trigger.config.ts"],
-  "sourcesContent": ["import { defineConfig } from \"@trigger.dev/sdk/v3\";\n\nexport default defineConfig({\n  project: \"proj_amoougeubbocksquqycw\",\n\n  // Your Next.js project is configured with a 300s (5min) maxDuration by default.\n  // You can mistakenly override this in your `vercel.json` or in the Vercel dashboard.\n  maxDuration: 300,\n\n  triggerDirectories: [\"src/trigger\"],\n  build: {},\n});\nexport const resolveEnvVars = undefined;"],
-  "mappings": ";;;;;;;;;AAAA;AAEA,IAAO,yBAAQ,aAAa;AAAA,EAC1B,SAAS;AAAA;AAAA;AAAA,EAIT,aAAa;AAAA,EAEb,oBAAoB,CAAC,aAAa;AAAA,EAClC,OAAO,CAAC;AACV,CAAC;AACM,IAAM,iBAAiB;",
-  "names": []
-}
