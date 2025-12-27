@@ -97,13 +97,25 @@ export const researchCompany = task({
             Return ONLY valid JSON.
         `;
 
-        const completion = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "llama-3.3-70b-versatile",
-            response_format: { type: "json_object" },
-        });
+        let text = "{}";
 
-        const text = completion.choices[0]?.message?.content || "{}";
+        try {
+            const completion = await groq.chat.completions.create({
+                messages: [{ role: "user", content: prompt }],
+                model: "llama-3.3-70b-versatile",
+                response_format: { type: "json_object" },
+            });
+
+            text = completion.choices[0]?.message?.content || "{}";
+        } catch (error: any) {
+            // Handle rate limit errors specifically
+            if (error?.status === 429 || error?.error?.code === "rate_limit_exceeded") {
+                throw new Error("Rate limit reached for model llama-3.3-70b-versatile. Please try again later.");
+            }
+
+            // Re-throw other errors
+            throw error;
+        }
 
         // Default values
         let summary = `Could not analyze ${payload.domain}`;
