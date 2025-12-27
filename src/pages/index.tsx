@@ -168,7 +168,7 @@ export default function Home() {
           </h1>
 
           <p className="text-lg text-gray-500 mb-10 leading-relaxed max-w-lg font-light">
-            Enter a domain to unleash our agent swarm. Identify high-leverage accounts, map organization hierarchies, and score buying intent.
+            Enter a domain to unleash try out this very basic tool! Identify high-leverage accounts, map organization hierarchies, and score buying intent.
           </p>
 
           <form onSubmit={handleSubmit} className="w-full relative max-w-lg">
@@ -253,6 +253,39 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* Error State */}
+          {companyData?.status === 'error' && (
+            <div className="absolute inset-0 z-20 bg-red-50/90 backdrop-blur-md rounded-2xl border-2 border-red-200 flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-full max-w-md space-y-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full mx-auto flex items-center justify-center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-600">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-red-900 mb-2">Analysis Failed</h3>
+                  <p className="text-sm text-red-700 bg-red-100 rounded-lg p-4 font-mono">
+                    {companyData.summary}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setTrackingId(null);
+                    setDomain('');
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          )}
+
 
           {/* Results Grid */}
           <div className={`transition-all duration-700 ${isResearching ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>

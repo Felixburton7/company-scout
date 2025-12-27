@@ -6,66 +6,69 @@ import { eq } from "drizzle-orm";
 export const researchCompany = task({
     id: "research-company",
     run: async (payload: { domain: string; dbId: string }) => {
-        // Validate required environment variables
-        if (!process.env.GROQ_API_KEY) {
-            throw new Error(
-                '❌ GROQ_API_KEY environment variable is not set!\n' +
-                'Please add it to your environment variables.'
-            );
-        }
+        const numericDbId = parseInt(payload.dbId, 10);
 
-        const Groq = await import("groq-sdk");
-        const groq = new Groq.default({ apiKey: process.env.GROQ_API_KEY });
+        try {
+            // Validate required environment variables
+            if (!process.env.GROQ_API_KEY) {
+                throw new Error(
+                    '❌ GROQ_API_KEY environment variable is not set!\n' +
+                    'Please add it to your environment variables.'
+                );
+            }
 
-        // helper to fetch text from a url
-        async function fetchSiteText(url: string) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const Groq = await import("groq-sdk");
+            const groq = new Groq.default({ apiKey: process.env.GROQ_API_KEY });
 
-                const res = await fetch(url, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36' },
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
+            // helper to fetch text from a url
+            async function fetchSiteText(url: string) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-                if (!res.ok) return "";
-                const html = await res.text();
+                    const res = await fetch(url, {
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36' },
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
 
-                // Get clear text content
-                return html.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, "")
-                    .replace(/<style[^>]*>([\S\s]*?)<\/style>/gmi, "")
-                    .replace(/<[^>]+>/g, " ")
-                    .replace(/\s+/g, " ")
-                    .slice(0, 20000);
-            } catch (e) {
-                console.log(`Failed to fetch ${url}:`, e);
+                    if (!res.ok) return "";
+                    const html = await res.text();
+
+                    // Get clear text content
+                    return html.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, "")
+                        .replace(/<style[^>]*>([\S\s]*?)<\/style>/gmi, "")
+                        .replace(/<[^>]+>/g, " ")
+                        .replace(/\s+/g, " ")
+                        .slice(0, 20000);
+                } catch (e) {
+                    console.log(`Failed to fetch ${url}:`, e);
+                    return "";
+                }
+            }
+
+            const baseUrl = payload.domain.startsWith('http') ? payload.domain : `https://${payload.domain}`;
+
+            // 1. Fetch Homepage
+            let aggressiveText = `SOURCE: HOMEPAGE (${baseUrl})\n` + await fetchSiteText(baseUrl);
+
+            // 2. Blindly check common "About" paths to catch the team
+            const subPages = ['/about', '/about-us', '/team', '/company'];
+
+            // We'll run these in parallel but leniently
+            const extraPages = await Promise.all(subPages.map(async path => {
+                const cleanUrl = baseUrl.replace(/\/$/, "");
+                const target = `${cleanUrl}${path}`;
+                const txt = await fetchSiteText(target);
+                if (txt.length > 500) { // Only keep if it looks like real content
+                    return `\nSOURCE: ${path.toUpperCase()} PAGE\n${txt}`;
+                }
                 return "";
-            }
-        }
+            }));
 
-        const baseUrl = payload.domain.startsWith('http') ? payload.domain : `https://${payload.domain}`;
+            aggressiveText += extraPages.join("\n");
 
-        // 1. Fetch Homepage
-        let aggressiveText = `SOURCE: HOMEPAGE (${baseUrl})\n` + await fetchSiteText(baseUrl);
-
-        // 2. Blindly check common "About" paths to catch the team
-        const subPages = ['/about', '/about-us', '/team', '/company'];
-
-        // We'll run these in parallel but leniently
-        const extraPages = await Promise.all(subPages.map(async path => {
-            const cleanUrl = baseUrl.replace(/\/$/, "");
-            const target = `${cleanUrl}${path}`;
-            const txt = await fetchSiteText(target);
-            if (txt.length > 500) { // Only keep if it looks like real content
-                return `\nSOURCE: ${path.toUpperCase()} PAGE\n${txt}`;
-            }
-            return "";
-        }));
-
-        aggressiveText += extraPages.join("\n");
-
-        const prompt = `
+            const prompt = `
             Act as an elite sales intelligence agent for Company Scout. 
             
             GOAL: Build an org chart of the INTERNAL TEAM at ${payload.domain}.
@@ -97,72 +100,84 @@ export const researchCompany = task({
             Return ONLY valid JSON.
         `;
 
-        let text = "{}";
+            let text = "{}";
 
-        try {
-            const completion = await groq.chat.completions.create({
-                messages: [{ role: "user", content: prompt }],
-                model: "llama-3.3-70b-versatile",
-                response_format: { type: "json_object" },
-            });
+            try {
+                const completion = await groq.chat.completions.create({
+                    messages: [{ role: "user", content: prompt }],
+                    model: "llama-3.3-70b-versatile",
+                    response_format: { type: "json_object" },
+                });
 
-            text = completion.choices[0]?.message?.content || "{}";
-        } catch (error: any) {
-            // Handle rate limit errors specifically
-            if (error?.status === 429 || error?.error?.code === "rate_limit_exceeded") {
-                throw new Error("Rate limit reached for model llama-3.3-70b-versatile. Please try again later.");
+                text = completion.choices[0]?.message?.content || "{}";
+            } catch (error: any) {
+                // Handle rate limit errors specifically
+                if (error?.status === 429 || error?.error?.code === "rate_limit_exceeded") {
+                    throw new Error("Rate limit reached for model llama-3.3-70b-versatile. Please try again later.");
+                }
+
+                // Re-throw other errors
+                throw error;
             }
 
-            // Re-throw other errors
+            // Default values
+            let summary = `Could not analyze ${payload.domain}`;
+            let contacts: any[] = [];
+            let emailDraft = "";
+
+            try {
+                const data = JSON.parse(text);
+                summary = data.summary || summary;
+                contacts = data.contacts || [];
+                emailDraft = data.emailDraft || "";
+
+                // Post-processing: If we found LinkedIn but no email, we leave email blank or try to guess? 
+                // The prompt says guess if high confidence, let's fallback to a safe guess if missing to ensure UI looks good
+                // checking if the email looks like a testimonial domain (e.g. not the target domain)
+                const targetDomain = payload.domain.replace('https://', '').replace('www.', '').split('/')[0];
+
+                contacts = contacts.map(c => {
+                    let email = c.email;
+                    // If no email, or email domain doesn't match target (likely a testimonial hallucination that slipped through), clean it
+                    if (!email || (email.includes('@') && !email.includes(targetDomain))) {
+                        // Force generic guess for the target domain
+                        email = `${c.name.split(' ')[0].toLowerCase()}@${targetDomain}`;
+                    }
+                    return { ...c, email };
+                });
+
+            } catch (e) {
+                console.error("Failed to parse Groq response:", e);
+            }
+
+            // Write back to SingleStore
+            console.log(`[company-researcher] Updating DB record ${numericDbId} with status 'qualified'`);
+
+            await db.update(companies)
+                .set({
+                    status: 'qualified',
+                    leadScore: contacts.length,
+                    summary: summary,
+                    contacts: contacts,
+                    emailDraft: emailDraft
+                })
+                .where(eq(companies.id, numericDbId));
+
+            console.log(`[company-researcher] DB update complete for ${payload.dbId}`);
+
+            return { score: contacts.length, summary, contacts, emailDraft };
+        } catch (error: any) {
+            // Update database with error status
+            console.error(`[company-researcher] Task failed for ${payload.dbId}:`, error.message);
+
+            await db.update(companies)
+                .set({
+                    status: 'error',
+                    summary: error.message || "An error occurred during research"
+                })
+                .where(eq(companies.id, numericDbId));
+
             throw error;
         }
-
-        // Default values
-        let summary = `Could not analyze ${payload.domain}`;
-        let contacts: any[] = [];
-        let emailDraft = "";
-
-        try {
-            const data = JSON.parse(text);
-            summary = data.summary || summary;
-            contacts = data.contacts || [];
-            emailDraft = data.emailDraft || "";
-
-            // Post-processing: If we found LinkedIn but no email, we leave email blank or try to guess? 
-            // The prompt says guess if high confidence, let's fallback to a safe guess if missing to ensure UI looks good
-            // checking if the email looks like a testimonial domain (e.g. not the target domain)
-            const targetDomain = payload.domain.replace('https://', '').replace('www.', '').split('/')[0];
-
-            contacts = contacts.map(c => {
-                let email = c.email;
-                // If no email, or email domain doesn't match target (likely a testimonial hallucination that slipped through), clean it
-                if (!email || (email.includes('@') && !email.includes(targetDomain))) {
-                    // Force generic guess for the target domain
-                    email = `${c.name.split(' ')[0].toLowerCase()}@${targetDomain}`;
-                }
-                return { ...c, email };
-            });
-
-        } catch (e) {
-            console.error("Failed to parse Groq response:", e);
-        }
-
-        // Write back to SingleStore
-        const numericDbId = parseInt(payload.dbId, 10);
-        console.log(`[company-researcher] Updating DB record ${numericDbId} with status 'qualified'`);
-
-        const updateResult = await db.update(companies)
-            .set({
-                status: 'qualified',
-                leadScore: contacts.length,
-                summary: summary,
-                contacts: contacts,
-                emailDraft: emailDraft
-            })
-            .where(eq(companies.id, numericDbId));
-
-        console.log(`[company-researcher] DB update complete for ${payload.dbId}:`, updateResult);
-
-        return { score: contacts.length, summary, contacts, emailDraft };
     },
 });
