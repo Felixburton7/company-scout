@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 export const researchCompany = task({
     id: "research-company",
-    run: async (payload: { domain: string; dbId: number }) => {
+    run: async (payload: { domain: string; dbId: string }) => {
         // Validate required environment variables
         if (!process.env.GROQ_API_KEY) {
             throw new Error(
@@ -136,7 +136,10 @@ export const researchCompany = task({
         }
 
         // Write back to SingleStore
-        await db.update(companies)
+        const numericDbId = parseInt(payload.dbId, 10);
+        console.log(`[company-researcher] Updating DB record ${numericDbId} with status 'qualified'`);
+
+        const updateResult = await db.update(companies)
             .set({
                 status: 'qualified',
                 leadScore: contacts.length,
@@ -144,7 +147,9 @@ export const researchCompany = task({
                 contacts: contacts,
                 emailDraft: emailDraft
             })
-            .where(eq(companies.id, payload.dbId));
+            .where(eq(companies.id, numericDbId));
+
+        console.log(`[company-researcher] DB update complete for ${payload.dbId}:`, updateResult);
 
         return { score: contacts.length, summary, contacts, emailDraft };
     },

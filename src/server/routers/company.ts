@@ -12,7 +12,8 @@ export const companyRouter = router({
             // 1. Create record in DB as "researching"
             const [result] = await db.insert(companies).values({ domain: input.domain });
             // MySQL2 returns ResultSetHeader at index 0
-            const id = result.insertId;
+            // Convert to string to avoid BigInt precision loss in JSON serialization
+            const id = String(result.insertId);
 
             // 2. Trigger the Agent
             await tasks.trigger("research-company", { domain: input.domain, dbId: id });
@@ -21,9 +22,13 @@ export const companyRouter = router({
         }),
 
     getResults: publicProcedure
-        .input(z.object({ id: z.number() }))
+        .input(z.object({ id: z.string() }))
         .query(async ({ input }) => {
-            const [record] = await db.select().from(companies).where(eq(companies.id, input.id));
+            // Parse back to number for the database query
+            const numericId = parseInt(input.id, 10);
+            console.log('[getResults] Querying for id:', input.id, 'numericId:', numericId);
+            const [record] = await db.select().from(companies).where(eq(companies.id, numericId));
+            console.log('[getResults] Found record:', record ? { id: record.id, status: record.status, domain: record.domain } : 'undefined');
             return record;
         })
 });
