@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk/v3";
+import { task } from "@trigger.dev/sdk";
 import { db } from "../db";
 import { companies } from "../db/schema";
 import { eq } from "drizzle-orm";

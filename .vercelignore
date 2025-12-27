@@ -1,0 +1,17 @@
+# Trigger.dev development files
+.trigger
+
+# Development files
+*.log
+npm-debug.log*
+.DS_Store
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+check-env.mjs
+check-models.mjs
+show-env-for-vercel.mjs
+init-db.mjs
