@@ -45,6 +45,7 @@ export default function Home() {
   const [trackingId, setTrackingId] = useState<string | null>(null);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [reassuranceIndex, setReassuranceIndex] = useState(0);
+  const [visualProgress, setVisualProgress] = useState(0);
   const [showRawData, setShowRawData] = useState(false);
 
   const analyzeMutation = trpc.company.analyze.useMutation({
@@ -52,6 +53,7 @@ export default function Home() {
       setTrackingId(data.id);
       setLoadingStepIndex(0);
       setReassuranceIndex(0);
+      setVisualProgress(0);
     },
     onError: (err) => {
       alert("Error starting analysis: " + err.message);
@@ -94,6 +96,40 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [isResearching]);
+
+  useEffect(() => {
+    if (!isResearching) {
+      setVisualProgress(0);
+      return;
+    }
+
+    const stepProgress = Math.round(((loadingStepIndex + 1) / LOADING_STEPS.length) * 100);
+
+    // If we're at the hanging step (88%), don't force-set it, let the creeper take over
+    // UNLESS the calculated step jumped backward or is significantly different (start of new run)
+    if (loadingStepIndex < LOADING_STEPS.length - 2) {
+      setVisualProgress(stepProgress);
+    } else if (visualProgress < stepProgress) {
+      // Ensure we at least reach the step progress
+      setVisualProgress(stepProgress);
+    }
+  }, [loadingStepIndex, isResearching]);
+
+  // Separate effect for "creeping" progress when hanging
+  useEffect(() => {
+    if (!isResearching || loadingStepIndex < LOADING_STEPS.length - 2) return;
+
+    const interval = setInterval(() => {
+      setVisualProgress((prev) => {
+        // Creep up to 99%
+        if (prev >= 99) return 99;
+        // Move faster if far behind, slower if close
+        return prev + 1;
+      });
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [isResearching, loadingStepIndex]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,7 +204,7 @@ export default function Home() {
           </h1>
 
           <p className="text-lg text-gray-500 mb-10 leading-relaxed max-w-lg font-light">
-            Enter a domain to unleash try out this very basic tool! Identify high-leverage accounts, map organization hierarchies, and score buying intent.
+            Enter a domain to deploy our reconnaissance agents. Identify high-leverage accounts, map organization hierarchies, and score buying intent.
           </p>
 
           <form onSubmit={handleSubmit} className="w-full relative max-w-lg">
@@ -214,7 +250,7 @@ export default function Home() {
                   <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
                   <div className="absolute inset-0 border-t-4 border-black rounded-full animate-spin"></div>
                   <div className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold">
-                    {Math.round(((loadingStepIndex + 1) / LOADING_STEPS.length) * 100)}%
+                    {visualProgress}%
                   </div>
                 </div>
 
@@ -479,7 +515,7 @@ export default function Home() {
                     <span className="text-2xl">🔍</span>
                   </div>
                   <p className="font-bold text-gray-900">Awaiting target</p>
-                  <p className="text-sm">Enter a domain above to initialize the scout.</p>
+                  <p className="text-sm">Enter a domain above to initialize the scout!Identify accounts, map organization hierarchies, and score buying intent.</p>
                 </div>
               </div>
             )}
